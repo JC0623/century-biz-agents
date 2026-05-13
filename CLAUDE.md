@@ -8,24 +8,34 @@ Open Spatial Intelligence Multi-Agent System.
 ## 아키텍처 개요
 
 ```
-Frontend (React + Naver/Kakao Maps)
-  ↓ 폴리곤 클릭 이벤트
+[MVP]   텍스트 입력 (행정동명 / 주소)
+[P2]    웹 UI 입력 (React)
+[P3]    지도 폴리곤 클릭 (Naver/Kakao Maps)
+        │
+        ▼
 LangGraph Orchestrator
   ↓ Send API 병렬 팬아웃
 MCP Tool Servers (6종)
   ↓ ToolResult 봉투 반환
-질 평가 게이트 → 합성 → 스트리밍 리포트
+질 평가 게이트 → 합성
+        │
+        ▼
+[MVP]   텍스트 리포트 (수치 표·신뢰도·권고)
+[P2]    차트 시각화 (토네이도·레이더·매트릭스)
+[P3]    지도 오버레이 (히트맵·스파크라인)
 ```
 
 ### 레이어 구성
 
-| 레이어 | 기술 | 경로 |
-|---|---|---|
-| Frontend | React, Tailwind, Recharts, ReactFlow | `frontend/` |
-| Orchestrator | LangGraph StateGraph | `agents/` |
-| MCP Servers | FastAPI (각 도구 독립 서버) | `mcp_servers/` |
-| Data Store | PostGIS + Object Storage + Vector DB | `data/` |
-| Security (Phase 3) | TEE + ZKP | `secure/` |
+| 레이어 | MVP | Phase 2 | Phase 3 |
+|---|---|---|---|
+| 입력 | CLI / FastAPI 텍스트 | React 웹 UI | 지도 폴리곤 클릭 |
+| 출력 | 텍스트 리포트·표 | Recharts 차트 | 지도 오버레이 |
+| Orchestrator | LangGraph StateGraph | ← 동일 | ← 동일 |
+| MCP Servers | FastAPI (6종) | ← 동일 | ← 동일 |
+| DB | PostgreSQL | ← 동일 | + PostGIS |
+| Maps | 없음 | 없음 | Naver/Kakao API |
+| Security | 기본 | 기본 | TEE + ZKP |
 
 ---
 
@@ -209,9 +219,16 @@ adjusted = stale_value * exp(-λ * staleness_days)
 
 ## 개발 로드맵
 
+### MVP (4주) — 지도 없이, 텍스트 리포트 완성 우선
+
 | 주차 | 목표 |
 |---|---|
 | 1주 | 6대 MCP JSON 스키마, ToolResult 구조, 공공 API 연동 |
 | 2주 | LangGraph Send 팬아웃, quality_gate, 신뢰도 스코어링 |
-| 3주 | GeoJSON 폴리곤, 토네이도·레이더·DAG 시각화, 모바일 UI |
-| 4주 | Fallback 체인, 베이지안 밸류에이션 보정, TEE 아키텍처 설계 |
+| 3주 | Fallback 체인, 베이지안 밸류에이션 보정, 텍스트 리포트 완성 |
+| 4주 | FastAPI 웹 인터페이스, 수치 표·시나리오 비교 출력 |
+
+### 이후 단계
+- **Phase 2:** React + Recharts 차트 시각화 (토네이도·레이더·DAG)
+- **Phase 3:** Naver/Kakao Maps 지도 통합 (데이터 파이프라인 안정 후)
+- **Phase 4:** TEE 기반 프라이빗 재무 결합, ISMS-P 인증

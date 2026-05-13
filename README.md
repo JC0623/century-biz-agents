@@ -22,12 +22,13 @@
 ## 기술 스택
 
 ```
-Frontend      React 18 · Tailwind CSS · Recharts · ReactFlow
-Maps          Naver Maps API / Kakao Maps API (GeoJSON Polygon)
+MVP           Python CLI / FastAPI + 텍스트 리포트 출력
+Phase 2       React 18 · Tailwind CSS · Recharts (차트·표 시각화)
+Phase 3       Naver Maps API / Kakao Maps API (GeoJSON Polygon)
 Orchestration LangGraph (StateGraph + Send API)
 Data Protocol MCP (Model Context Protocol) — 6개 독립 API 서버
 LLM           Claude Sonnet · GPT-4o (Function Calling)
-Storage       PostGIS · Object Storage · Vector DB
+Storage       PostgreSQL · Object Storage · Vector DB
 Security      TEE · ZKP (Phase 3)
 ```
 
@@ -36,7 +37,7 @@ Security      TEE · ZKP (Phase 3)
 ## 아키텍처
 
 ```
-사용자 (지도 폴리곤 클릭)
+사용자 (행정동명 / 주소 텍스트 입력)
         │
         ▼
 ┌─────────────────────────┐
@@ -57,7 +58,8 @@ Security      TEE · ZKP (Phase 3)
 └─────────────────────────┘
         │
         ▼
-  스트리밍 리포트 (채팅 패널)
+  텍스트 리포트 출력
+  (수치 표 · 신뢰도 점수 · 권고사항)
 ```
 
 ---
@@ -82,17 +84,15 @@ Security      TEE · ZKP (Phase 3)
 
 ---
 
-## 시각화 도구
+## 출력 및 시각화 (단계별)
 
-| 차트 | 목적 | 우선순위 |
+| 단계 | 출력 방식 | 내용 |
 |---|---|---|
-| 폴리곤 히트맵 | 지역별 데이터 밀집도 공간 탐색 | P0 |
-| 민감도 토네이도 차트 | 밸류에이션 민감 변수 즉시 파악 | P1 |
-| 시나리오 비교 매트릭스 | Bull/Base/Bear 3가지 케이스 비교 | P1 |
-| 경쟁력 레이더 차트 | 8개 축 비즈니스 품질 종합 평가 | P2 |
-| 에이전트 추론 DAG | AI 분석 경로 투명 시각화 | P2 |
-| 시계열 스파크라인 | 폴리곤 위 월별 매출 추이 오버레이 | P3 |
-| 리스크-수익 스캐터 | 대상 vs 유사 사업체 포지셔닝 | P3 |
+| **MVP** | 텍스트 리포트 | 수치 표, 신뢰도 점수, 권고사항, 한계 명시 |
+| **Phase 2** | 웹 차트 | 민감도 토네이도, 시나리오 매트릭스, 경쟁력 레이더 |
+| **Phase 3** | 지도 시각화 | 폴리곤 히트맵, 스파크라인 오버레이, 리스크-수익 스캐터 |
+
+> 지도는 데이터 파이프라인이 안정화된 이후 도입. MVP는 행정동명 입력 → 텍스트 리포트 출력으로 충분.
 
 ---
 
@@ -193,12 +193,24 @@ osi-mas/
 
 ## 개발 로드맵
 
+### MVP — 텍스트 리포트 우선
 - [x] PRD 및 아키텍처 설계 완료
 - [ ] **1주차** — 6대 MCP 도구 스키마 정의 및 공공 API 연동
 - [ ] **2주차** — LangGraph Send 팬아웃, quality_gate, 신뢰도 스코어링
-- [ ] **3주차** — GeoJSON 폴리곤 렌더링, 시각화 컴포넌트 구현
-- [ ] **4주차** — Fallback 체인, 베이지안 밸류에이션 보정, 최적화
-- [ ] **Phase 3** — TEE 기반 프라이빗 재무 데이터 결합, ISMS-P 인증
+- [ ] **3주차** — Fallback 체인, 베이지안 밸류에이션 보정, 텍스트 리포트 완성
+- [ ] **4주차** — FastAPI 웹 인터페이스, 수치 표·시나리오 비교 출력
+
+### Phase 2 — 차트 시각화
+- [ ] React + Recharts 웹 UI (토네이도, 레이더, 시나리오 매트릭스)
+- [ ] 에이전트 추론 DAG (ReactFlow)
+
+### Phase 3 — 지도 통합
+- [ ] Naver/Kakao Maps GeoJSON 폴리곤 렌더링
+- [ ] 히트맵, 스파크라인 오버레이
+
+### Phase 4 — 보안 확장
+- [ ] TEE 기반 프라이빗 재무 데이터 결합
+- [ ] ISMS-P 인증 추진
 
 ---
 
