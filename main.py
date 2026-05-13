@@ -14,10 +14,10 @@ load_dotenv()
 
 def _print_banner():
     print("""
-╔══════════════════════════════════════════════╗
-║   OSI-MAS  Open Spatial Intelligence         ║
-║   Multi-Agent System  v0.1.0 (MVP)           ║
-╚══════════════════════════════════════════════╝
+================================================
+  OSI-MAS  Open Spatial Intelligence
+  Multi-Agent System  v0.1.0 (MVP)
+================================================
 """)
 
 
