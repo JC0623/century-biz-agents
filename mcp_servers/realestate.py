@@ -1,10 +1,11 @@
 """
-공간 가치 에이전트 — 국토교통부 상업업무용 부동산 매매 실거래가
-건물 용도, 면적, 거래금액, 용도지역 분석
-API: https://apis.data.go.kr/1613000/RTMSDataSvcNrgTrade
+공간 가치 에이전트
+- 국토교통부 상업업무용 부동산 매매 실거래가 (RTMSDataSvcNrgTrade)
+- 국토교통부 건축물대장 총괄표제부 (BldRgstHubService)
 """
 import os
 import xml.etree.ElementTree as ET
+from collections import Counter
 from datetime import datetime, timedelta
 from agents.state import ToolResult
 from agents.confidence import source_confidence
@@ -12,10 +13,11 @@ from .base import BaseMCPTool
 
 
 MOLIT_API_KEY = os.getenv("MOLIT_API_KEY", "")
+BUILDING_API_KEY = os.getenv("BUILDING_API_KEY", "")
 MOLIT_BASE_URL = "https://apis.data.go.kr/1613000"
 
-# 시군구 코드 매핑 (region_id 또는 좌표 → 시군구코드)
-DEFAULT_SGG_CD = "11680"  # 강남구
+DEFAULT_SGG_CD = "11680"   # 강남구
+DEFAULT_DONG_CD = "10100"  # 역삼동
 
 
 def _region_to_sgg(region_id: str) -> str:
@@ -95,6 +97,9 @@ class RealEstateTool(BaseMCPTool):
         land_uses = list({d["land_use"] for d in deals if d["land_use"]})[:3]
         bldg_uses = list({d["building_use"] for d in deals if d["building_use"]})[:3]
 
+        # 건축물대장 조회 (용적률·건폐율·주용도)
+        bldg_info = await self._fetch_building_registry(sgg_cd)
+
         confidence = source_confidence(
             freshness_days=freshness,
             authority_score=self.authority_score,
@@ -104,12 +109,14 @@ class RealEstateTool(BaseMCPTool):
         )
 
         summary = (
-            f"[공간 가치] {sgg_cd} 기준 {len(deals)}건 분석 | "
+            f"[공간 가치] {sgg_cd} 기준 실거래 {len(deals)}건 | "
             f"평균 거래가 {avg_amount/10000:.1f}억원 | "
-            f"평당 평균 {avg_per_pyeong/10000:.0f}만원 | "
+            f"평당 평균 {avg_per_pyeong:,.0f}만원 | "
             f"용도지역: {', '.join(land_uses) or '미상'} | "
             f"건물용도: {', '.join(bldg_uses) or '미상'}"
         )
+        if bldg_info:
+            summary += f" | {bldg_info}"
 
         return ToolResult(
             tool=self.tool_name,
@@ -119,6 +126,54 @@ class RealEstateTool(BaseMCPTool):
             data_ref=None,
             summary=summary,
         )
+
+    async def _fetch_building_registry(self, sgg_cd: str) -> str:
+        """건축물대장 총괄표제부 — 용적률·건폐율·주용도 집계."""
+        if not BUILDING_API_KEY:
+            return ""
+        try:
+            resp = await self.client.get(
+                f"{MOLIT_BASE_URL}/BldRgstHubService/getBrRecapTitleInfo",
+                params={
+                    "serviceKey": BUILDING_API_KEY,
+                    "sigunguCd": sgg_cd,
+                    "bjdongCd": DEFAULT_DONG_CD,
+                    "numOfRows": "50",
+                    "pageNo": "1",
+                    "type": "json",
+                },
+            )
+            root = ET.fromstring(resp.text)
+            items = root.findall(".//item")
+            if not items:
+                return ""
+
+            vl_rats, bc_rats, purposes = [], [], []
+            for item in items:
+                try:
+                    vl = float(item.findtext("vlRat", "0") or "0")
+                    bc = float(item.findtext("bcRat", "0") or "0")
+                    purp = item.findtext("mainPurpsCdNm", "").strip()
+                    if vl > 0:
+                        vl_rats.append(vl)
+                    if bc > 0:
+                        bc_rats.append(bc)
+                    if purp:
+                        purposes.append(purp)
+                except (ValueError, TypeError):
+                    continue
+
+            avg_vl = sum(vl_rats) / len(vl_rats) if vl_rats else 0
+            avg_bc = sum(bc_rats) / len(bc_rats) if bc_rats else 0
+            top_purp = ", ".join(k for k, _ in Counter(purposes).most_common(3))
+
+            return (
+                f"건축물대장 {len(items)}동 | "
+                f"평균 용적률 {avg_vl:.0f}% | 평균 건폐율 {avg_bc:.0f}% | "
+                f"주용도: {top_purp or '미상'}"
+            )
+        except Exception:
+            return ""
 
     def _stub(self, region_id: str) -> ToolResult:
         confidence = source_confidence(
