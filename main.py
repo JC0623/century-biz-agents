@@ -5,7 +5,11 @@ OSI-MAS CLI 진입점
 import asyncio
 import os
 import sys
-from pathlib import Path
+
+# Windows 터미널 UTF-8 출력 강제
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
 
@@ -22,8 +26,8 @@ def _print_banner():
 
 
 def _print_progress(tool: str, status: str, conf: float | None = None):
-    icons = {"ok": "✓", "timeout": "✗", "error": "✗", "running": "…"}
-    icon = icons.get(status, "?")
+    icons = {"ok": "[OK]", "timeout": "[TIMEOUT]", "error": "[ERROR]", "running": "[...]"}
+    icon = icons.get(status, "[?]")
     conf_str = f"  신뢰도: {conf:.2f}" if conf is not None else ""
     print(f"  {icon} {tool:<20} {status}{conf_str}")
 
@@ -50,6 +54,8 @@ async def run(region_id: str, query: str, verbose: bool = False):
         print("\n[에이전트별 결과]")
         for tool_name, result in final_state.get("tool_results", {}).items():
             _print_progress(tool_name, result["status"], result.get("confidence"))
+            if result["status"] in ("error", "timeout") and result.get("error"):
+                print(f"    └ 오류: {result['error']}")
 
     print(final_state.get("final_report", "리포트 생성 실패"))
 

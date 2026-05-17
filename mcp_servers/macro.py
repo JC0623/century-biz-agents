@@ -23,9 +23,13 @@ class MacroTool(BaseMCPTool):
         if not ECOS_API_KEY:
             return self._stub(region_id)
 
-        # 생산자물가지수 (PPI) 조회
+        # 생산자물가지수 (PPI) 조회 — 전월 기준 (1월이면 전년 12월)
         now = datetime.now()
-        period = f"{now.year}{now.month - 1:02d}"
+        if now.month == 1:
+            year, month = now.year - 1, 12
+        else:
+            year, month = now.year, now.month - 1
+        period = f"{year}{month:02d}"
 
         resp = await self.client.get(
             f"{ECOS_BASE_URL}/StatisticSearch/{ECOS_API_KEY}/json/kr/1/5/404Y014/MM/{period}/{period}",
